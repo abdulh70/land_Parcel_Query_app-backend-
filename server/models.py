@@ -1,93 +1,64 @@
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import MetaData
 from sqlalchemy_serializer import SerializerMixin
-from sqlalchemy.ext.associationproxy import association_proxy
 
-from config import db
 
-# Models go here!
-from app import db
-
+metadata = MetaData()
+db = SQLAlchemy(metadata=metadata)
 class User(db.Model):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    phone = db.Column(db.String(20), nullable=False)
-    role = db.Column(db.String(50), nullable=False)
+    queries = db.relationship('LandQuery', backref='user', lazy=True)
+
 
 class Owner(db.Model):
+    __tablename__ = 'owner'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    id_proof = db.Column(db.String(100), nullable=False)
-    contact_info = db.Column(db.String(100), nullable=False)
+    lands = db.relationship('Land', backref='owner', lazy=True)
+
 
 class Buyer(db.Model):
+    __tablename__ = 'buyer'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    contact_info = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
+    transactions = db.relationship('Transaction', backref='buyer', lazy=True)
 
-class Property(db.Model):
+
+class Land(db.Model):
+    __tablename__ = 'land'
     id = db.Column(db.Integer, primary_key=True)
     location = db.Column(db.String(200), nullable=False)
-    area = db.Column(db.Float, nullable=False)
+    size = db.Column(db.Float, nullable=False)
     owner_id = db.Column(db.Integer, db.ForeignKey('owner.id'), nullable=False)
-    status = db.Column(db.String(50), nullable=False)
-    owner = db.relationship('Owner', backref='properties', lazy=True)
+    transactions = db.relationship('LandTransaction', back_populates='land')
+    queries = db.relationship('LandQuery', backref='land', lazy=True)
 
-class LandQuery(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    property_id = db.Column(db.Integer, db.ForeignKey('property.id'), nullable=False)
-    query_text = db.Column(db.Text, nullable=False)
-    query_date = db.Column(db.DateTime, nullable=False)
-    status = db.Column(db.String(50), nullable=False)
-    user = db.relationship('User', backref='queries', lazy=True)
-    property = db.relationship('Property', backref='queries', lazy=True)
 
 class Transaction(db.Model):
+    __tablename__ = 'transaction'
     id = db.Column(db.Integer, primary_key=True)
-    buyer_id = db.Column(db.Integer, db.ForeignKey('buyer.id'), nullable=False)
-    seller_id = db.Column(db.Integer, db.ForeignKey('owner.id'), nullable=False)
-    transaction_date = db.Column(db.DateTime, nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    buyer = db.relationship('Buyer', backref='transactions', lazy=True)
-    seller = db.relationship('Owner', backref='sales', lazy=True)
+    date = db.Column(db.DateTime, nullable=False)
+    buyer_id = db.Column(db.Integer, db.ForeignKey('buyer.id'), nullable=False)
+    lands = db.relationship('LandTransaction', back_populates='transaction')
 
-class PropertyTransaction(db.Model):
-    property_id = db.Column(db.Integer, db.ForeignKey('property.id'), primary_key=True)
-    transaction_id = db.Column(db.Integer, db.ForeignKey('transaction.id'), primary_key=True)
-class Buyer(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    contact_info = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
 
-class Property(db.Model):
+class LandTransaction(db.Model):
+    __tablename__ = 'land_transaction'
     id = db.Column(db.Integer, primary_key=True)
-    location = db.Column(db.String(200), nullable=False)
-    area = db.Column(db.Float, nullable=False)
-    owner_id = db.Column(db.Integer, db.ForeignKey('owner.id'), nullable=False)
-    status = db.Column(db.String(50), nullable=False)
-    owner = db.relationship('Owner', backref='properties', lazy=True)
+    land_id = db.Column(db.Integer, db.ForeignKey('land.id'), nullable=False)
+    transaction_id = db.Column(db.Integer, db.ForeignKey('transaction.id'), nullable=False)
+    land = db.relationship('Land', back_populates='transactions')
+    transaction = db.relationship('Transaction', back_populates='lands')
+
 
 class LandQuery(db.Model):
+    __tablename__ = 'land_query'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    property_id = db.Column(db.Integer, db.ForeignKey('property.id'), nullable=False)
+    land_id = db.Column(db.Integer, db.ForeignKey('land.id'), nullable=False)
     query_text = db.Column(db.Text, nullable=False)
-    query_date = db.Column(db.DateTime, nullable=False)
-    status = db.Column(db.String(50), nullable=False)
-    user = db.relationship('User', backref='queries', lazy=True)
-    property = db.relationship('Property', backref='queries', lazy=True)
-
-class Transaction(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    buyer_id = db.Column(db.Integer, db.ForeignKey('buyer.id'), nullable=False)
-    seller_id = db.Column(db.Integer, db.ForeignKey('owner.id'), nullable=False)
-    transaction_date = db.Column(db.DateTime, nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    buyer = db.relationship('Buyer', backref='transactions', lazy=True)
-    seller = db.relationship('Owner', backref='sales', lazy=True)
-
-class PropertyTransaction(db.Model):
-    property_id = db.Column(db.Integer, db.ForeignKey('property.id'), primary_key=True)
-    transaction_id = db.Column(db.Integer, db.ForeignKey('transaction.id'), primary_key=True)
